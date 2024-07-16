@@ -9,4 +9,9 @@ package com.lgd.test.beans;
 public class JmpPatch {
     public long addr; // 将此处地址的指令替换
     public long jmpAddr; // 待跳转指令
+
+    @Override
+    public String toString() {
+        return String.format("[addr: %x, jmpAddr: %x]", addr, jmpAddr);
+    }
 }

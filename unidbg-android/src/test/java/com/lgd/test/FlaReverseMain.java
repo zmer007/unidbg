@@ -93,7 +93,7 @@ public class FlaReverseMain {
 
     void call_stringFromJNI(String suffix) {
         mCurTrace = new Trace_stringFromJNI(mMatchQueueIns, mMatchQueueAddr, mMatchQueueRegs,
-                0x1474, 0x2B8, 0x14AC); // 手动介入
+                0x1474, 0x2B8, 0x14C8); // 手动介入
 
         int arg = 10;
         DvmClass JNIHelper = mVm.resolveClass("com/lgd/helloollvm/JNIHelper");
@@ -102,7 +102,9 @@ public class FlaReverseMain {
 
         // 修复 so 文件
         List<JmpPatch> jmpPatches = mCurTrace.extractJmpPatches();
-        // TODO
+        for (JmpPatch jp : jmpPatches) {
+            System.out.printf("jp: %x, %x\n", jp.addr, jp.jmpAddr);
+        }
         patchLibFile(mTargetLibF, jmpPatches, suffix);
 
         mCurTrace = null;
