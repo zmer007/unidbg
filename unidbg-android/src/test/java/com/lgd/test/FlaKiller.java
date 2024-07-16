@@ -48,6 +48,8 @@ public class FlaKiller {
     final Capstone mCpst = new Capstone(Capstone.CS_ARCH_ARM64, Capstone.CS_MODE_ARM);
 
     long mMainDispatcherJmpAddr;
+    long mFuncEntry;
+    long mFuncLength;
     Block mMainDispatchBlock;
     final List<Long> mMainDispatcherIdxs = new ArrayList<>(); // 记录主选择器索引顺序
     final List<Block> mRealBlocks = new ArrayList<>();
@@ -59,8 +61,14 @@ public class FlaKiller {
     public static void main(String[] args) {
         FlaKiller fk = new FlaKiller();
         fk.traverseWatcher();
+
+        System.out.println("-------------------------------call_JNI_OnLoad start----------------------------------");
         fk.call_JNI_OnLoad("JNI_OnLoad");
-        fk.call_stringFromJNI();
+        System.out.println("-------------------------------call_JNI_OnLoad finished-------------------------------");
+
+        System.out.println("-------------------------------call_stringFromJNI start----------------------------------");
+        fk.call_stringFromJNI("stringFromJNI");
+        System.out.println("-------------------------------call_stringFromJNI finished-------------------------------");
     }
 
     public void pathLib(File soF, List<JmpPatch> patches, File patchedF) throws Exception {
@@ -97,7 +105,7 @@ public class FlaKiller {
 
     // suffix 即后缀名，代表修复后是否增加后缀名，如果后缀名为空，则代表覆盖原文件
     void call_JNI_OnLoad(String suffix) {
-        resetMatches(0x179C);
+        resetMatcheScope(0x172C, 0x90, 0x179C); // 手动介入
         mDm.callJNI_OnLoad(mEmulator);
         List<JmpPatch> jmpPatches = extractJmpPatches(mRealBlocks, mMainDispatchBlock);
         try {
@@ -111,14 +119,17 @@ public class FlaKiller {
         }
     }
 
-    void call_stringFromJNI() {
-        resetMatches(0x179C);
+    void call_stringFromJNI(String suffix) {
+        resetMatcheScope(0x1474, 0x2B8, 0x14AC); // 手动介入
+        int arg = 10;
         DvmClass JNIHelper = mVm.resolveClass("com/lgd/helloollvm/JNIHelper");
-        DvmObject<String> str = JNIHelper.newObject(null).callJniMethodObject(mEmulator, "stringFromJNI(I)Ljava/lang/String;", 5);
-        System.out.println(str);
+        DvmObject<String> str = JNIHelper.newObject(null).callJniMethodObject(mEmulator, "stringFromJNI(I)Ljava/lang/String;", arg);
+        System.out.printf("stringFromJNI(%d) retVal= %s\n", arg, str);
     }
 
-    private void resetMatches(long addr) {
+    private void resetMatcheScope(long funcEntry, long funcLength, long addr) {
+        mFuncEntry = funcEntry;
+        mFuncLength = funcLength;
         mMainDispatcherJmpAddr = addr;
         mMainDispatcherIdxs.clear();
         mRealBlocks.clear();
@@ -126,6 +137,9 @@ public class FlaKiller {
 
     void onTrace(Backend backend, long address, int size) {
         long curAddr = address - mTargetModule.base;
+        // 避免进入子函数
+        if (curAddr < mFuncEntry || curAddr > mFuncEntry + mFuncLength) return;
+
         byte[] buf = backend.mem_read(address, size);
         Instruction[] asm = mCpst.disasm(buf, 0);
         Instruction curIns = asm[0];
@@ -154,7 +168,7 @@ public class FlaKiller {
             }
         }
 
-        if (curAddr == 0x1c7c + size * 6L) { // 手动修复 0x1c7c 真实块
+        if (curAddr == 0x1c7c + size * 6L) { // // 手动介入，修复 0x1c7c 真实块
             long idx = getWReg(mMatchQueueRegs.get(mMatchQueueRegs.size() - 6).getRegV(UC_ARM64_REG_X9));
             long nextIdx = getWReg(backend.reg_read(UC_ARM64_REG_X8).longValue());
             String beqOpStr = curIns.getOpStr();
