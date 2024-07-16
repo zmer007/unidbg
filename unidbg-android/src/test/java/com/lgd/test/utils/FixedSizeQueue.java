@@ -1,4 +1,4 @@
-package com.lgd.test;
+package com.lgd.test.utils;
 
 import java.util.ArrayDeque;
 import java.util.Deque;

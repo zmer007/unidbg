@@ -1,4 +1,4 @@
-package com.lgd.test;
+package com.lgd.test.beans;
 
 /**
  * 跳转布丁，将汇编
@@ -7,6 +7,6 @@ package com.lgd.test;
  * addr     b jmpAddr
  */
 public class JmpPatch {
-    long addr; // 将此处地址的指令替换
-    long jmpAddr; // 待跳转指令
+    public long addr; // 将此处地址的指令替换
+    public long jmpAddr; // 待跳转指令
 }

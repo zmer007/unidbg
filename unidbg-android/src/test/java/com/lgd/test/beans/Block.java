@@ -1,4 +1,4 @@
-package com.lgd.test;
+package com.lgd.test.beans;
 
 import java.util.Objects;
 
