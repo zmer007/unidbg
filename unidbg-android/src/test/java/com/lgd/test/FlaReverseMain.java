@@ -102,9 +102,6 @@ public class FlaReverseMain {
 
         // 修复 so 文件
         List<JmpPatch> jmpPatches = mCurTrace.extractJmpPatches();
-        for (JmpPatch jp : jmpPatches) {
-            System.out.printf("jp: %x, %x\n", jp.addr, jp.jmpAddr);
-        }
         patchLibFile(mTargetLibF, jmpPatches, suffix);
 
         mCurTrace = null;
@@ -129,7 +126,7 @@ public class FlaReverseMain {
             fis.read(data);
             fis.close();
             for (JmpPatch jp : patches) {
-                String jmp = String.format("b.eq #0x%x", jp.jmpAddr - jp.addr);
+                String jmp = String.format("b #0x%x", jp.jmpAddr - jp.addr);
                 KeystoneEncoded ke = ks.assemble(jmp);
                 for (int i = 0; i < ke.getMachineCode().length; i++) {
                     data[(int) jp.addr + i] = ke.getMachineCode()[i];

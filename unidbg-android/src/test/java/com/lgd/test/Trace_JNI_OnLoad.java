@@ -55,15 +55,11 @@ public class Trace_JNI_OnLoad extends Trace {
         }
 
         if (moduleBaseAddr == 0x1c7c + size * 6L) { // // 手动介入，修复 0x1c7c 真实块
-            long idx = getWReg(mTraceRegs.get(mTraceRegs.size() - 6).getRegV(UC_ARM64_REG_X9));
             long nextIdx = getWReg(backend.reg_read(UC_ARM64_REG_X8).longValue());
-            String beqOpStr = curIns.getOpStr();
-            long jmpOffAddr = Long.parseLong(beqOpStr.replace("#", "").replace("0x", ""), 16);
-            System.out.printf("manualFixRb: addr= 0x1c7c, idx= %x, nextIdx= %x, jmpAddr= %x, ins = %s\n", idx, nextIdx, jmpOffAddr + moduleBaseAddr, curIns);
             for (Block blk : mRealBlocks) {
                 if (blk.addr == 0x1c7c) {
                     blk.nextIdx = nextIdx;
-                    blk.jmpAddr = jmpOffAddr + moduleBaseAddr;
+                    blk.jmpAddr = 0x1c7c + size * 6L;
                 }
             }
         }
