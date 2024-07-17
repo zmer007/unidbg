@@ -7,9 +7,7 @@ import com.lgd.test.beans.JmpPatch;
 import com.lgd.test.beans.Regs;
 import com.lgd.test.utils.FixedSizeQueue;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
 
 import static com.lgd.test.beans.Regs.getWReg;
 import static unicorn.Arm64Const.*;
@@ -47,10 +45,11 @@ public class Trace_JNI_OnLoad extends Trace {
             mMainDispatcherIdxs.add(idx);
             if (mMainDispatchBlock == null) {
                 mMainDispatchBlock = new Block();
-                mMainDispatchBlock.addr = -1;
-                mMainDispatchBlock.idx = idx;
-                mMainDispatchBlock.nextIdx = mMainDispatchBlock.idx;
+                mMainDispatchBlock.addr = 0;
+                mMainDispatchBlock.idx = 0;
+                mMainDispatchBlock.nextIdx = idx;
                 mMainDispatchBlock.jmpAddr = moduleOffAddr;
+                mRealBlocks.add(mMainDispatchBlock);
             }
         }
 
@@ -73,9 +72,7 @@ public class Trace_JNI_OnLoad extends Trace {
                 Block blk = new Block();
                 blk.addr = jmpOffAddr + moduleOffAddr;
                 blk.idx = idx;
-                if (!mRealBlocks.contains(blk)) {
-                    mRealBlocks.add(blk);
-                }
+                mRealBlocks.add(blk);
                 System.out.printf("condDispatcher-true: %s\n", blk);
             }
         }
@@ -109,41 +106,61 @@ public class Trace_JNI_OnLoad extends Trace {
             blk.nextIdx = nextRbIdx;
             blk.addr = curRbEntryAddr;
             blk.jmpAddr = curRbJmpAddr;
-            System.out.printf("realBlock：%s\n", blk);
-            int index = mRealBlocks.indexOf(blk);
-            if (index == -1) mRealBlocks.add(blk);
-            else mRealBlocks.set(index, blk);
+            mRealBlocks.add(blk);
         }
+    }
+
+    void distinctRB() {
+        mRealBlocks.sort((o1, o2) -> (int) (o1.addr - o2.addr));
+        for (Block b : mRealBlocks) {
+            System.out.println("sorted RB: " + b);
+            for (Block bb : mRealBlocks) {
+                if (b.idx != bb.idx) continue;
+                if (b.jmpAddr == 0 && bb.jmpAddr != 0) {
+                    b.jmpAddr = bb.jmpAddr;
+                }
+                if (b.nextIdx == 0 && bb.nextIdx != 0) {
+                    b.nextIdx = bb.nextIdx;
+                }
+            }
+        }
+        Set<Block> distinct = new HashSet<>(mRealBlocks);
+        for (Block b : distinct) {
+            System.out.println("distinct RB: " + b);
+        }
+        mRealBlocks.clear();
+        mRealBlocks.addAll(distinct);
     }
 
     @Override
     List<JmpPatch> extractJmpPatches() {
-        final List<JmpPatch> jmpPatches = new ArrayList<>();
-        List<Block> rbs = new ArrayList<>(mRealBlocks);
+        distinctRB();
 
-        Block curBlk = mMainDispatchBlock;
-        while (!rbs.isEmpty()) {
-            JmpPatch jp = new JmpPatch();
-            jp.addr = curBlk.jmpAddr;
-            boolean found = false;
-            for (Block b : rbs) {
-                if (curBlk.nextIdx == b.idx) {
-                    found = true;
-                    jp.jmpAddr = b.addr;
-                    jmpPatches.add(jp);
-                    curBlk = b;
-                    rbs.remove(b);
+        final List<JmpPatch> result = new ArrayList<>();
+        for (Block b : mRealBlocks) {
+            if (b.jmpAddr == 0) continue;
+            result.add(new JmpPatch(b.jmpAddr, 0));
+        }
+        for (JmpPatch jp : result) {
+            if (jp.addr == 0x12a0) continue;
+            for (Block b : mRealBlocks) {
+                if (b.jmpAddr != jp.addr) continue;
+                long idx = b.nextIdx;
+                for (Block bb : mRealBlocks) {
+                    if (bb.idx != idx) continue;
+                    jp.jmpAddr = bb.addr;
+                    break;
                 }
-                rbs.remove(b);
-                break;
             }
-
-            if (!found) {
-                System.out.printf("中断，无法提取所有 JmpPatch。miss: %s\n", curBlk);
+            if (jp.jmpAddr == 0) {
+                System.out.println("中断：此布丁未发现跳转地址：" + jp);
                 return null;
             }
         }
-        return jmpPatches;
+        for (JmpPatch jp : result) {
+            System.out.println("patch: "+jp);
+        }
+        return result;
     }
 
     /**

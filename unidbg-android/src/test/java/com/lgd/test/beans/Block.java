@@ -14,12 +14,12 @@ public class Block {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Block block = (Block) o;
-        return addr == block.addr;
+        return addr == block.addr && jmpAddr == block.jmpAddr && idx == block.idx && nextIdx == block.nextIdx;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(addr);
+        return Objects.hash(addr, jmpAddr, idx, nextIdx);
     }
 
     @Override
