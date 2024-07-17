@@ -28,9 +28,9 @@ public class Trace_JNI_OnLoad extends Trace {
     }
 
     @Override
-    void onTrace(Backend backend, long address, long moduleBaseAddr, int size) {
+    void onTrace(Backend backend, long address, long moduleOffAddr, int size) {
         // 避免进入子函数
-        if (moduleBaseAddr < mFuncEntry || moduleBaseAddr > mFuncEntry + mFuncLength) return;
+        if (moduleOffAddr < mFuncEntry || moduleOffAddr > mFuncEntry + mFuncLength) return;
 
         int qSize = mTraceIns.size();
         Instruction ins1 = mTraceIns.get(qSize - 3);
@@ -40,7 +40,7 @@ public class Trace_JNI_OnLoad extends Trace {
         // if (curIns != null) System.out.printf("%x %s %s\n", moduleBaseAddr, curIns.getMnemonic(), curIns.getOpStr());
 
 
-        if (moduleBaseAddr == mMainDispatcherJmpAddr) {
+        if (moduleOffAddr == mMainDispatcherJmpAddr) {
             long idx = getWReg(backend.reg_read(UC_ARM64_REG_X9).longValue());
             System.out.printf("mainDispatcher: idx=%x\n", idx);
 
@@ -50,11 +50,11 @@ public class Trace_JNI_OnLoad extends Trace {
                 mMainDispatchBlock.addr = -1;
                 mMainDispatchBlock.idx = idx;
                 mMainDispatchBlock.nextIdx = mMainDispatchBlock.idx;
-                mMainDispatchBlock.jmpAddr = moduleBaseAddr;
+                mMainDispatchBlock.jmpAddr = moduleOffAddr;
             }
         }
 
-        if (moduleBaseAddr == 0x1c7c + size * 6L) { // // 手动介入，修复 0x1c7c 真实块
+        if (moduleOffAddr == 0x1c7c + size * 6L) { // // 手动介入，修复 0x1c7c 真实块
             long nextIdx = getWReg(backend.reg_read(UC_ARM64_REG_X8).longValue());
             for (Block blk : mRealBlocks) {
                 if (blk.addr == 0x1c7c) {
@@ -71,7 +71,7 @@ public class Trace_JNI_OnLoad extends Trace {
                 String beqOpStr = curIns.getOpStr();
                 long jmpOffAddr = Long.parseLong(beqOpStr.replace("#", "").replace("0x", ""), 16);
                 Block blk = new Block();
-                blk.addr = jmpOffAddr + moduleBaseAddr;
+                blk.addr = jmpOffAddr + moduleOffAddr;
                 blk.idx = idx;
                 if (!mRealBlocks.contains(blk)) {
                     mRealBlocks.add(blk);

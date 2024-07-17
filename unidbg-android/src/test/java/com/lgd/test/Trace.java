@@ -27,7 +27,7 @@ public abstract class Trace {
         mMainDispatcherJmpAddr = mainDispatcherJmpAddr;
     }
 
-    abstract void onTrace(Backend backend, long address, long moduleBaseAddr, int size);
+    abstract void onTrace(Backend backend, long address, long moduleOffAddr, int size);
 
 
     abstract List<JmpPatch> extractJmpPatches();

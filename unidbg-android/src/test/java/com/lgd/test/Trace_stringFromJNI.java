@@ -26,9 +26,9 @@ public class Trace_stringFromJNI extends Trace {
     }
 
     @Override
-    void onTrace(Backend backend, long address, long moduleBaseAddr, int size) {
+    void onTrace(Backend backend, long address, long moduleOffAddr, int size) {
         // 避免进入子函数
-        if (moduleBaseAddr < mFuncEntry || moduleBaseAddr > mFuncEntry + mFuncLength) return;
+        if (moduleOffAddr < mFuncEntry || moduleOffAddr > mFuncEntry + mFuncLength) return;
 
         int qSize = mTraceIns.size();
         Instruction ins1 = mTraceIns.get(qSize - 3);
@@ -38,7 +38,7 @@ public class Trace_stringFromJNI extends Trace {
 //        if (curIns != null) System.out.printf("%x %s %s\n", moduleBaseAddr, curIns.getMnemonic(), curIns.getOpStr());
 
         long idx = getWReg(backend.reg_read(UC_ARM64_REG_X9).longValue());
-        if (moduleBaseAddr == mMainDispatcherJmpAddr) {
+        if (moduleOffAddr == mMainDispatcherJmpAddr) {
             System.out.printf("mainDispatcher: idx=%x\n", idx);
 
             mMainDispatcherIdxs.add(idx);
@@ -47,7 +47,7 @@ public class Trace_stringFromJNI extends Trace {
                 mMainDispatchBlock.addr = 0;
                 mMainDispatchBlock.idx = 0;
                 mMainDispatchBlock.nextIdx = idx;
-                mMainDispatchBlock.jmpAddr = moduleBaseAddr;
+                mMainDispatchBlock.jmpAddr = moduleOffAddr;
                 System.out.println("mainBlock: " + mMainDispatchBlock);
             }
         }
@@ -58,7 +58,7 @@ public class Trace_stringFromJNI extends Trace {
                 String beqOpStr = curIns.getOpStr();
                 long jmpOffAddr = Long.parseLong(beqOpStr.replace("#", "").replace("0x", ""), 16);
                 Block blk = new Block();
-                blk.addr = jmpOffAddr + moduleBaseAddr;
+                blk.addr = jmpOffAddr + moduleOffAddr;
                 blk.idx = idx;
                 if (!mRealBlocks.contains(blk)) {
                     mRealBlocks.add(blk);
@@ -69,9 +69,9 @@ public class Trace_stringFromJNI extends Trace {
 
         if (isMatchRealBlockTailPattern(ins2, curIns)) {
             Block rb = new Block();
-            System.out.printf("RB: %x %s %s\n", moduleBaseAddr, curIns.getMnemonic(), curIns.getOpStr());
+            System.out.printf("RB: %x %s %s\n", moduleOffAddr, curIns.getMnemonic(), curIns.getOpStr());
             rb.nextIdx = getWReg(mTraceRegs.get(mTraceRegs.size() - 1).getRegV(UC_ARM64_REG_X9));
-            rb.jmpAddr = moduleBaseAddr;
+            rb.jmpAddr = moduleOffAddr;
 
             for (int i = mTraceIns.size() - 2; i > 0; i--) {
                 Instruction ins = mTraceIns.get(i);
