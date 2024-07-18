@@ -2,7 +2,7 @@ package com.lgd.test;
 
 import capstone.api.Instruction;
 import com.github.unidbg.arm.backend.Backend;
-import com.lgd.test.beans.JmpPatch;
+import com.lgd.test.beans.AddressPatch;
 import com.lgd.test.beans.Regs;
 import com.lgd.test.utils.FixedSizeQueue;
 
@@ -30,5 +30,5 @@ public abstract class Trace {
     abstract void onTrace(Backend backend, long address, long moduleOffAddr, int size);
 
 
-    abstract List<JmpPatch> extractJmpPatches();
+    abstract List<AddressPatch> extractJmpPatches();
 }

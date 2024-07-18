@@ -2,6 +2,7 @@ package com.lgd.test;
 
 import capstone.api.Instruction;
 import com.github.unidbg.arm.backend.Backend;
+import com.lgd.test.beans.AddressPatch;
 import com.lgd.test.beans.Block;
 import com.lgd.test.beans.JmpPatch;
 import com.lgd.test.beans.Regs;
@@ -133,15 +134,16 @@ public class Trace_JNI_OnLoad extends Trace {
     }
 
     @Override
-    List<JmpPatch> extractJmpPatches() {
+    List<AddressPatch> extractJmpPatches() {
         distinctRB();
 
-        final List<JmpPatch> result = new ArrayList<>();
+        final List<AddressPatch> result = new ArrayList<>();
         for (Block b : mRealBlocks) {
             if (b.jmpAddr == 0) continue;
             result.add(new JmpPatch(b.jmpAddr, 0));
         }
-        for (JmpPatch jp : result) {
+        for (AddressPatch ajp : result) {
+            JmpPatch jp = (JmpPatch) ajp;
             if (jp.addr == 0x12a0) continue;
             for (Block b : mRealBlocks) {
                 if (b.jmpAddr != jp.addr) continue;
@@ -156,9 +158,6 @@ public class Trace_JNI_OnLoad extends Trace {
                 System.out.println("中断：此布丁未发现跳转地址：" + jp);
                 return null;
             }
-        }
-        for (JmpPatch jp : result) {
-            System.out.println("patch: "+jp);
         }
         return result;
     }

@@ -6,20 +6,25 @@ package com.lgd.test.beans;
  * 转换成如下
  * addr     b jmpAddr
  */
-public class JmpPatch {
-    public long addr; // 将此处地址的指令替换
+public class JmpPatch extends AddressPatch {
     public long jmpAddr; // 待跳转指令
 
     public JmpPatch() {
+        super(0);
     }
 
     public JmpPatch(long addr, long jmpAddr) {
-        this.addr = addr;
+        super(addr);
         this.jmpAddr = jmpAddr;
     }
 
     @Override
     public String toString() {
         return String.format("[addr: %x, jmpAddr: %x]", addr, jmpAddr);
+    }
+
+    @Override
+    public String getAssemble() {
+        return String.format("b #0x%x", jmpAddr - addr);
     }
 }

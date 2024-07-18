@@ -2,6 +2,7 @@ package com.lgd.test;
 
 import capstone.api.Instruction;
 import com.github.unidbg.arm.backend.Backend;
+import com.lgd.test.beans.AddressPatch;
 import com.lgd.test.beans.Block;
 import com.lgd.test.beans.JmpPatch;
 import com.lgd.test.beans.Regs;
@@ -104,10 +105,10 @@ public class Trace_stringFromJNI extends Trace {
     }
 
     @Override
-    List<JmpPatch> extractJmpPatches() {
+    List<AddressPatch> extractJmpPatches() {
         distinctRB();
 
-        final List<JmpPatch> jmpPatches = new ArrayList<>();
+        final List<AddressPatch> jmpPatches = new ArrayList<>();
         List<Block> rbs = new ArrayList<>(mRealBlocks);
 
         Block curBlk = mMainDispatchBlock;
