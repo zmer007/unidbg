@@ -18,9 +18,11 @@ import com.github.unidbg.linux.android.dvm.DvmClass;
 import com.github.unidbg.linux.android.dvm.DvmObject;
 import com.github.unidbg.linux.android.dvm.VM;
 import com.github.unidbg.memory.Memory;
-import com.lgd.test.beans.JmpPatch;
+import com.github.unidbg.pointer.UnidbgPointer;
+import com.lgd.test.beans.AddressPatch;
 import com.lgd.test.beans.Regs;
 import com.lgd.test.utils.FixedSizeQueue;
+import com.sun.jna.Pointer;
 import keystone.Keystone;
 import keystone.KeystoneArchitecture;
 import keystone.KeystoneEncoded;
@@ -56,12 +58,16 @@ public class FlaReverseMain {
         fk.traverseWatcher();
 
         System.out.println("-------------------------------call_JNI_OnLoad start----------------------------------");
-        fk.call_JNI_OnLoad("JNI_OnLoad");
+        fk.call_JNI_OnLoad("");
         System.out.println("-------------------------------call_JNI_OnLoad finished-------------------------------");
 
         System.out.println("-------------------------------call_stringFromJNI start----------------------------------");
-        fk.call_stringFromJNI("stringFromJNI");
+        fk.call_stringFromJNI("");
         System.out.println("-------------------------------call_stringFromJNI finished-------------------------------");
+
+        System.out.println("-------------------------------call_fibonacci start----------------------------------");
+        fk.call_fibonacci("");
+        System.out.println("-------------------------------call_fibonacci finished-------------------------------");
     }
 
     FlaReverseMain() {
@@ -85,7 +91,7 @@ public class FlaReverseMain {
         mDm.callJNI_OnLoad(mEmulator);
 
         // 修复 so 文件
-        List<JmpPatch> jmpPatches = mCurTrace.extractJmpPatches();
+        List<AddressPatch> jmpPatches = mCurTrace.extractJmpPatches();
         patchLibFile(mTargetLibF, jmpPatches, suffix);
 
         mCurTrace = null;
@@ -101,13 +107,29 @@ public class FlaReverseMain {
         System.out.printf("stringFromJNI(%d) retVal= %s\n", arg, str);
 
         // 修复 so 文件
-        List<JmpPatch> jmpPatches = mCurTrace.extractJmpPatches();
+        List<AddressPatch> jmpPatches = mCurTrace.extractJmpPatches();
         patchLibFile(mTargetLibF, jmpPatches, suffix);
 
         mCurTrace = null;
     }
 
-    void patchLibFile(File inFile, List<JmpPatch> patches, String suffix) {
+    void call_fibonacci(String suffix) {
+        long arg = 10;
+        mCurTrace = new Trace_fibonacci(mMatchQueueIns, mMatchQueueAddr, mMatchQueueRegs,
+                0x91C, 0xB58, 0x95C, arg); // 手动介入
+
+        Number cfNum = mTargetModule.callFunction(mEmulator, 0x91C, arg);
+        Pointer ptrRet = UnidbgPointer.pointer(mEmulator, cfNum);
+        System.out.println(ptrRet.getString(0));
+
+        // 修复 so 文件
+        List<AddressPatch> jmpPatches = mCurTrace.extractJmpPatches();
+        patchLibFile(mTargetLibF, jmpPatches, suffix);
+
+        mCurTrace = null;
+    }
+
+    void patchLibFile(File inFile, List<AddressPatch> patches, String suffix) {
         if (inFile == null || !inFile.exists()) {
             System.out.println("patch failed: input file not exists.");
             return;
@@ -125,11 +147,10 @@ public class FlaReverseMain {
             byte[] data = new byte[(int) inFile.length()];
             fis.read(data);
             fis.close();
-            for (JmpPatch jp : patches) {
-                String jmp = String.format("b #0x%x", jp.jmpAddr - jp.addr);
-                KeystoneEncoded ke = ks.assemble(jmp);
+            for (AddressPatch jp : patches) {
+                KeystoneEncoded ke = ks.assemble(jp.getAssemble());
                 for (int i = 0; i < ke.getMachineCode().length; i++) {
-                    data[(int) jp.addr + i] = ke.getMachineCode()[i];
+                    data[(int) jp.getAddr() + i] = ke.getMachineCode()[i];
                 }
             }
             FileOutputStream fos = new FileOutputStream(outFile);

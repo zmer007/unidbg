@@ -3,7 +3,7 @@ package com.lgd.test;
 import capstone.api.Instruction;
 import com.github.unidbg.arm.backend.Backend;
 import com.lgd.test.beans.AddressPatch;
-import com.lgd.test.beans.Block;
+import com.lgd.test.beans.FlaIndex;
 import com.lgd.test.beans.JmpPatch;
 import com.lgd.test.beans.Regs;
 import com.lgd.test.utils.FixedSizeQueue;
@@ -15,9 +15,9 @@ import static unicorn.Arm64Const.*;
 
 public class Trace_stringFromJNI extends Trace {
 
-    Block mMainDispatchBlock;
+    FlaIndex mMainDispatchFlaIndex;
     final List<Long> mMainDispatcherIdxs = new ArrayList<>(); // 记录主选择器索引顺序
-    final List<Block> mRealBlocks = new ArrayList<>();
+    final List<FlaIndex> mRealPatchIndices = new ArrayList<>();
 
     public Trace_stringFromJNI(FixedSizeQueue<Instruction> queueIns,
                                FixedSizeQueue<Long> queueAddr,
@@ -43,13 +43,13 @@ public class Trace_stringFromJNI extends Trace {
             System.out.printf("mainDispatcher: idx=%x\n", idx);
 
             mMainDispatcherIdxs.add(idx);
-            if (mMainDispatchBlock == null) {
-                mMainDispatchBlock = new Block();
-                mMainDispatchBlock.addr = 0;
-                mMainDispatchBlock.idx = 0;
-                mMainDispatchBlock.nextIdx = idx;
-                mMainDispatchBlock.jmpAddr = moduleOffAddr;
-                System.out.println("mainBlock: " + mMainDispatchBlock);
+            if (mMainDispatchFlaIndex == null) {
+                mMainDispatchFlaIndex = new FlaIndex();
+                mMainDispatchFlaIndex.addr = 0;
+                mMainDispatchFlaIndex.idx = 0;
+                mMainDispatchFlaIndex.nextIdx = idx;
+                mMainDispatchFlaIndex.jmpAddr = moduleOffAddr;
+                System.out.println("mainBlock: " + mMainDispatchFlaIndex);
             }
         }
 
@@ -58,18 +58,18 @@ public class Trace_stringFromJNI extends Trace {
             if (zReg == 1) {
                 String beqOpStr = curIns.getOpStr();
                 long jmpOffAddr = Long.parseLong(beqOpStr.replace("#", "").replace("0x", ""), 16);
-                Block blk = new Block();
+                FlaIndex blk = new FlaIndex();
                 blk.addr = jmpOffAddr + moduleOffAddr;
                 blk.idx = idx;
-                if (!mRealBlocks.contains(blk)) {
-                    mRealBlocks.add(blk);
+                if (!mRealPatchIndices.contains(blk)) {
+                    mRealPatchIndices.add(blk);
                 }
                 System.out.printf("condDispatcher-true: %s\n", blk);
             }
         }
 
         if (isMatchRealBlockTailPattern(ins2, curIns)) {
-            Block rb = new Block();
+            FlaIndex rb = new FlaIndex();
             System.out.printf("RB: %x %s %s\n", moduleOffAddr, curIns.getMnemonic(), curIns.getOpStr());
             rb.nextIdx = getWReg(mTraceRegs.get(mTraceRegs.size() - 1).getRegV(UC_ARM64_REG_X9));
             rb.jmpAddr = moduleOffAddr;
@@ -80,7 +80,7 @@ public class Trace_stringFromJNI extends Trace {
                     rb.addr = mTraceAddr.get(i + 1);
                     rb.idx = getWReg(mTraceRegs.get(i).getRegV(UC_ARM64_REG_X9));
                     System.out.println(rb);
-                    mRealBlocks.add(rb);
+                    mRealPatchIndices.add(rb);
                     break;
                 }
             }
@@ -88,8 +88,8 @@ public class Trace_stringFromJNI extends Trace {
     }
 
     void distinctRB() {
-        for (Block b : mRealBlocks) {
-            for (Block bb : mRealBlocks) {
+        for (FlaIndex b : mRealPatchIndices) {
+            for (FlaIndex bb : mRealPatchIndices) {
                 if (b.idx != bb.idx) continue;
                 if (b.jmpAddr == 0 && bb.jmpAddr != 0) {
                     b.jmpAddr = bb.jmpAddr;
@@ -99,9 +99,9 @@ public class Trace_stringFromJNI extends Trace {
                 }
             }
         }
-        Set<Block> distinct = new HashSet<>(mRealBlocks);
-        mRealBlocks.clear();
-        mRealBlocks.addAll(distinct);
+        Set<FlaIndex> distinct = new HashSet<>(mRealPatchIndices);
+        mRealPatchIndices.clear();
+        mRealPatchIndices.addAll(distinct);
     }
 
     @Override
@@ -109,17 +109,17 @@ public class Trace_stringFromJNI extends Trace {
         distinctRB();
 
         final List<AddressPatch> jmpPatches = new ArrayList<>();
-        List<Block> rbs = new ArrayList<>(mRealBlocks);
+        List<FlaIndex> rbs = new ArrayList<>(mRealPatchIndices);
 
-        Block curBlk = mMainDispatchBlock;
+        FlaIndex curBlk = mMainDispatchFlaIndex;
         while (!rbs.isEmpty()) {
-            JmpPatch jp = new JmpPatch();
+            JmpPatch jp = new JmpPatch(0, 0);
             jp.addr = curBlk.jmpAddr;
             boolean found = false;
-            for (Block b : rbs) {
+            for (FlaIndex b : rbs) {
                 if (curBlk.nextIdx == b.idx) {
                     found = true;
-                    jp.jmpAddr = b.addr;
+                    jp.jmpAddr = b.addr - jp.jmpAddr;
                     jmpPatches.add(jp);
                     curBlk = b;
                     rbs.remove(b);

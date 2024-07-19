@@ -3,7 +3,7 @@ package com.lgd.test;
 import capstone.api.Instruction;
 import com.github.unidbg.arm.backend.Backend;
 import com.lgd.test.beans.AddressPatch;
-import com.lgd.test.beans.Block;
+import com.lgd.test.beans.FlaIndex;
 import com.lgd.test.beans.JmpPatch;
 import com.lgd.test.beans.Regs;
 import com.lgd.test.utils.FixedSizeQueue;
@@ -15,9 +15,9 @@ import static unicorn.Arm64Const.*;
 
 public class Trace_JNI_OnLoad extends Trace {
 
-    Block mMainDispatchBlock;
+    FlaIndex mMainDispatchFlaIndex;
     final List<Long> mMainDispatcherIdxs = new ArrayList<>(); // 记录主选择器索引顺序
-    final List<Block> mRealBlocks = new ArrayList<>();
+    final List<FlaIndex> mRealPatchIndices = new ArrayList<>();
 
     public Trace_JNI_OnLoad(FixedSizeQueue<Instruction> queueIns,
                             FixedSizeQueue<Long> queueAddr,
@@ -44,19 +44,19 @@ public class Trace_JNI_OnLoad extends Trace {
             System.out.printf("mainDispatcher: idx=%x\n", idx);
 
             mMainDispatcherIdxs.add(idx);
-            if (mMainDispatchBlock == null) {
-                mMainDispatchBlock = new Block();
-                mMainDispatchBlock.addr = 0;
-                mMainDispatchBlock.idx = 0;
-                mMainDispatchBlock.nextIdx = idx;
-                mMainDispatchBlock.jmpAddr = moduleOffAddr;
-                mRealBlocks.add(mMainDispatchBlock);
+            if (mMainDispatchFlaIndex == null) {
+                mMainDispatchFlaIndex = new FlaIndex();
+                mMainDispatchFlaIndex.addr = 0;
+                mMainDispatchFlaIndex.idx = 0;
+                mMainDispatchFlaIndex.nextIdx = idx;
+                mMainDispatchFlaIndex.jmpAddr = moduleOffAddr;
+                mRealPatchIndices.add(mMainDispatchFlaIndex);
             }
         }
 
         if (moduleOffAddr == 0x1c7c + size * 6L) { // // 手动介入，修复 0x1c7c 真实块
             long nextIdx = getWReg(backend.reg_read(UC_ARM64_REG_X8).longValue());
-            for (Block blk : mRealBlocks) {
+            for (FlaIndex blk : mRealPatchIndices) {
                 if (blk.addr == 0x1c7c) {
                     blk.nextIdx = nextIdx;
                     blk.jmpAddr = 0x1c7c + size * 6L;
@@ -70,10 +70,10 @@ public class Trace_JNI_OnLoad extends Trace {
             if (zReg == 1) {
                 String beqOpStr = curIns.getOpStr();
                 long jmpOffAddr = Long.parseLong(beqOpStr.replace("#", "").replace("0x", ""), 16);
-                Block blk = new Block();
+                FlaIndex blk = new FlaIndex();
                 blk.addr = jmpOffAddr + moduleOffAddr;
                 blk.idx = idx;
-                mRealBlocks.add(blk);
+                mRealPatchIndices.add(blk);
                 System.out.printf("condDispatcher-true: %s\n", blk);
             }
         }
@@ -102,20 +102,20 @@ public class Trace_JNI_OnLoad extends Trace {
             }
 
             // 4. 保存真实块，如果前驱中保存过真实块，则进行更新
-            Block blk = new Block();
+            FlaIndex blk = new FlaIndex();
             blk.idx = curRbIdx;
             blk.nextIdx = nextRbIdx;
             blk.addr = curRbEntryAddr;
             blk.jmpAddr = curRbJmpAddr;
-            mRealBlocks.add(blk);
+            mRealPatchIndices.add(blk);
         }
     }
 
     void distinctRB() {
-        mRealBlocks.sort((o1, o2) -> (int) (o1.addr - o2.addr));
-        for (Block b : mRealBlocks) {
+        mRealPatchIndices.sort((o1, o2) -> (int) (o1.addr - o2.addr));
+        for (FlaIndex b : mRealPatchIndices) {
             System.out.println("sorted RB: " + b);
-            for (Block bb : mRealBlocks) {
+            for (FlaIndex bb : mRealPatchIndices) {
                 if (b.idx != bb.idx) continue;
                 if (b.jmpAddr == 0 && bb.jmpAddr != 0) {
                     b.jmpAddr = bb.jmpAddr;
@@ -125,12 +125,12 @@ public class Trace_JNI_OnLoad extends Trace {
                 }
             }
         }
-        Set<Block> distinct = new HashSet<>(mRealBlocks);
-        for (Block b : distinct) {
+        Set<FlaIndex> distinct = new HashSet<>(mRealPatchIndices);
+        for (FlaIndex b : distinct) {
             System.out.println("distinct RB: " + b);
         }
-        mRealBlocks.clear();
-        mRealBlocks.addAll(distinct);
+        mRealPatchIndices.clear();
+        mRealPatchIndices.addAll(distinct);
     }
 
     @Override
@@ -138,17 +138,17 @@ public class Trace_JNI_OnLoad extends Trace {
         distinctRB();
 
         final List<AddressPatch> result = new ArrayList<>();
-        for (Block b : mRealBlocks) {
+        for (FlaIndex b : mRealPatchIndices) {
             if (b.jmpAddr == 0) continue;
             result.add(new JmpPatch(b.jmpAddr, 0));
         }
         for (AddressPatch ajp : result) {
             JmpPatch jp = (JmpPatch) ajp;
             if (jp.addr == 0x12a0) continue;
-            for (Block b : mRealBlocks) {
+            for (FlaIndex b : mRealPatchIndices) {
                 if (b.jmpAddr != jp.addr) continue;
                 long idx = b.nextIdx;
-                for (Block bb : mRealBlocks) {
+                for (FlaIndex bb : mRealPatchIndices) {
                     if (bb.idx != idx) continue;
                     jp.jmpAddr = bb.addr;
                     break;
