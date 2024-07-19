@@ -7,20 +7,17 @@ package com.lgd.test.beans;
  * addr     b jmpAddr
  */
 public class JmpPatch extends AddressPatch {
+    public long addr;
     public long jmpAddr; // 待跳转指令
 
-    public JmpPatch() {
-        super(0);
-    }
-
     public JmpPatch(long addr, long jmpAddr) {
-        super(addr);
+        this.addr = addr;
         this.jmpAddr = jmpAddr;
     }
 
     @Override
-    public String toString() {
-        return String.format("[addr: %x, jmpAddr: %x]", addr, jmpAddr);
+    public long getAddr() {
+        return addr;
     }
 
     @Override

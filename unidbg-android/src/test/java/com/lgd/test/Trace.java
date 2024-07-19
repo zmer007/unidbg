@@ -16,15 +16,17 @@ public abstract class Trace {
     final long mFuncEntry;
     final long mFuncLength;
     final long mMainDispatcherJmpAddr;
+    final Object[] mArgs;
 
     public Trace(FixedSizeQueue<Instruction> traceIns, FixedSizeQueue<Long> traceddr, FixedSizeQueue<Regs> traceRegs,
-                 long funcEntry, long funcLength, long mainDispatcherJmpAddr) {
+                 long funcEntry, long funcLength, long mainDispatcherJmpAddr, Object... args) {
         mTraceIns = traceIns;
         mTraceAddr = traceddr;
         mTraceRegs = traceRegs;
         mFuncEntry = funcEntry;
         mFuncLength = funcLength;
         mMainDispatcherJmpAddr = mainDispatcherJmpAddr;
+        mArgs = args;
     }
 
     abstract void onTrace(Backend backend, long address, long moduleOffAddr, int size);

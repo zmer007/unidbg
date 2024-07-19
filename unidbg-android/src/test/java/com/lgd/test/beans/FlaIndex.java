@@ -2,7 +2,7 @@ package com.lgd.test.beans;
 
 import java.util.Objects;
 
-public class Block {
+public class FlaIndex {
     public long addr;
     public long jmpAddr;
 
@@ -13,8 +13,8 @@ public class Block {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        Block block = (Block) o;
-        return addr == block.addr && jmpAddr == block.jmpAddr && idx == block.idx && nextIdx == block.nextIdx;
+        FlaIndex flaIndex = (FlaIndex) o;
+        return addr == flaIndex.addr && jmpAddr == flaIndex.jmpAddr && idx == flaIndex.idx && nextIdx == flaIndex.nextIdx;
     }
 
     @Override

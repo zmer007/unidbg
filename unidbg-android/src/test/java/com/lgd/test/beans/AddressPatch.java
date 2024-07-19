@@ -1,12 +1,12 @@
 package com.lgd.test.beans;
 
 public abstract class AddressPatch {
-    public long addr;
-
-    public AddressPatch(long addr) {
-        this.addr = addr;
-    }
+    public abstract long getAddr();
 
     public abstract String getAssemble();
 
+    @Override
+    public String toString() {
+        return String.format("path: %x\t%s", getAddr(), getAssemble());
+    }
 }
