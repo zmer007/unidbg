@@ -149,6 +149,24 @@ public class Trace_fibonacci extends Trace {
         for (InsBlock ib : mInsBlocks) {
             System.out.println(ib);
         }
+        // 输出内容如下
+        // ins scope: [fd4-ff8]
+        // fd4 movz w8, #0xcbb1
+        // fd8 movk w8, #0xc0a7, lsl #16
+        // fdc movz w9, #0x9855
+        // fe0 movk w9, #0x108a, lsl #16
+        // fe4 ldur w10, [x29, #-0x3c]
+        // fe8 ldur w11, [x29, #-0x1c]
+        // fec cmp w10, w11
+        // ff0 csel w8, w8, w9, lt
+        // ff4 stur w8, [x29, #-0x40]
+        // ff8 b #0x478
+        // 此真实块存在两处后继，所以，需要增加 b.eq 指令，用于跳转到不同后继
+        // 增加 b.eq 指令有如下 2 种做法
+        // 1. 删除当前真实块的 1 条指令，比如 ldur w11, [x29, #-0x1c]，此指令目的是获取入参值，这个是已知值，可以不从栈中获取，
+        //    删除后将其后指令向前移，然后在 b #0x478 指令前添加 b.eq 指令
+        // 2. 查找修复后无法执行到的代码块，比如条件选择选择器块增加两条指令 b.eq & b 指令，然后将 ff8 处的 b 指令跳到 b.eq 位置处
+
         // fe8 cmp w10, #0xarg[0]
         patches.add(new FixPatch(0xfe8, String.format("cmp w10, #0x%x", (long) mArgs[0])));
         // fec csel w8, w8, w9, lt
