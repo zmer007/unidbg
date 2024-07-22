@@ -2,12 +2,13 @@ package com.lgd.test;
 
 import capstone.api.Instruction;
 import com.github.unidbg.arm.backend.Backend;
-import com.lgd.test.beans.*;
-import com.lgd.test.utils.FixedSizeQueue;
+import com.lgd.base.Trace;
+import com.lgd.base.beans.*;
+import com.lgd.base.utils.FixedSizeQueue;
 
 import java.util.*;
 
-import static com.lgd.test.beans.Regs.getWReg;
+import static com.lgd.base.beans.Regs.getWReg;
 import static unicorn.Arm64Const.*;
 
 public class Trace_fibonacci extends Trace {
@@ -27,7 +28,7 @@ public class Trace_fibonacci extends Trace {
     }
 
     @Override
-    void onTrace(Backend backend, long address, long moduleOffAddr, int size) {
+    public void onTrace(Backend backend, long address, long moduleOffAddr, int size) {
         // 避免进入子函数
         if (moduleOffAddr < mFuncEntry || moduleOffAddr > mFuncEntry + mFuncLength) return;
         int qSize = mTraceIns.size();
@@ -120,7 +121,7 @@ public class Trace_fibonacci extends Trace {
     }
 
     @Override
-    List<AddressPatch> extractJmpPatches() {
+    public List<AddressPatch> extractJmpPatches() {
         distinctRB();
 
         final List<AddressPatch> patches = new ArrayList<>();

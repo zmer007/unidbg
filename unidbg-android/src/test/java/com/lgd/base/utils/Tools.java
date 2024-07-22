@@ -1,4 +1,4 @@
-package com.lgd.test.utils;
+package com.lgd.base.utils;
 
 import org.junit.Test;
 

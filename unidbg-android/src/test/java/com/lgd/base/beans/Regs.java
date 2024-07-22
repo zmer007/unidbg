@@ -1,4 +1,4 @@
-package com.lgd.test.beans;
+package com.lgd.base.beans;
 
 public class Regs {
     final int[] registers;

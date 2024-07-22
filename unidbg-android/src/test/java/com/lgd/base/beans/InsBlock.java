@@ -1,4 +1,4 @@
-package com.lgd.test.beans;
+package com.lgd.base.beans;
 
 import capstone.api.Instruction;
 

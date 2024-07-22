@@ -1,4 +1,4 @@
-package com.lgd.test.beans;
+package com.lgd.base.beans;
 
 public abstract class AddressPatch {
     public abstract long getAddr();

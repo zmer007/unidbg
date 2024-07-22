@@ -1,4 +1,4 @@
-package com.lgd.test.beans;
+package com.lgd.base.beans;
 
 /**
  * 跳转布丁，将汇编
