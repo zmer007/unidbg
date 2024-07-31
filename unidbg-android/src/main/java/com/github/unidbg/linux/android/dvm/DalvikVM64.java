@@ -553,7 +553,9 @@ public class DalvikVM64 extends BaseVM implements VM {
                 DvmClass dvmClass = dvmObject == null ? null : dvmObject.getObjectType();
                 DvmMethod dvmMethod = dvmClass == null ? null : dvmClass.getMethod(jmethodID.toIntPeer());
                 if (dvmMethod == null) {
-                    throw new BackendException("dvmObject=" + dvmObject + ", dvmClass=" + dvmClass + ", jmethodID=" + jmethodID);
+                    // throw new BackendException("dvmObject=" + dvmObject + ", dvmClass=" + dvmClass + ", jmethodID=" + jmethodID);
+                    System.out.println("throw new BackendException dvmObject=" + dvmObject + ", dvmClass=" + dvmClass + ", jmethodID=" + jmethodID);
+                    return addLocalObject(null);
                 } else {
                     VaList vaList = new VaList64(emulator, DalvikVM64.this, va_list, dvmMethod);
                     DvmObject<?> obj = dvmMethod.callObjectMethodV(dvmObject, vaList);
@@ -630,7 +632,9 @@ public class DalvikVM64 extends BaseVM implements VM {
                 DvmClass dvmClass = dvmObject == null ? null : dvmObject.getObjectType();
                 DvmMethod dvmMethod = dvmClass == null ? null : dvmClass.getMethod(jmethodID.toIntPeer());
                 if (dvmMethod == null) {
-                    throw new BackendException();
+                    // throw new BackendException();
+                    System.out.println("throw new BackendException: object: " + dvmObject + ", class: " + dvmClass + ", method: " + dvmMethod);
+                    return JNI_FALSE;
                 } else {
                     VaList vaList = new VaList64(emulator, DalvikVM64.this, va_list, dvmMethod);
                     boolean ret = dvmMethod.callBooleanMethodV(dvmObject, vaList);
